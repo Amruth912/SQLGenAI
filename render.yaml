@@ -1,0 +1,68 @@
+services:
+  # 1. Spring Boot Backend Web Service
+  - type: web
+    name: sqlgenai-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    region: oregon
+    envVars:
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false # Set securely in Render dashboard
+      - key: DB_HOST
+        fromDatabase:
+          name: sqlgenai-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: sqlgenai-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: sqlgenai-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: sqlgenai-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: sqlgenai-db
+          property: password
+      - key: INIT_SAMPLE_DATA
+        value: "true"
+
+  # 2. React Frontend Static Site
+  - type: web
+    name: sqlgenai-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: frontend/dist
+    plan: free
+    region: oregon
+    headers:
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: "*"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: sqlgenai-backend
+          property: url
+          postfix: /api/v1
+
+databases:
+  # 3. Managed PostgreSQL Database
+  - name: sqlgenai-db
+    databaseName: sqlgenai_db
+    user: postgres
+    plan: free
+    region: oregon

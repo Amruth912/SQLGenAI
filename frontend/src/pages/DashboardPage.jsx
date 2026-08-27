@@ -49,8 +49,8 @@ export default function DashboardPage() {
                 SQLGenAI — Natural Language to SQL
               </h1>
               <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-                Ask a question in plain English. The AI generates a safe, read-only PostgreSQL query,
-                validates it with JSqlParser, executes it, and returns live results.
+                Ask a question or describe a data operation in plain English. The AI generates safe, validated PostgreSQL queries
+                (SELECT, INSERT, UPDATE, DELETE, DDL), requires confirmation for mutations, and executes live.
               </p>
             </div>
             <div className="flex-shrink-0">
@@ -84,7 +84,7 @@ export default function DashboardPage() {
             <Sparkles className="w-5 h-5 text-indigo-400 flex-shrink-0" />
             <div>
               <p className="text-xs text-slate-500">AI Provider</p>
-              <p className="text-sm font-medium text-indigo-300">Gemini 1.5 Flash</p>
+              <p className="text-sm font-medium text-indigo-300">Gemini Flash</p>
             </div>
             <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
           </div>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
             <Layers className="w-5 h-5 text-teal-400 flex-shrink-0" />
             <div>
               <p className="text-xs text-slate-500">SQL Validator</p>
-              <p className="text-sm font-medium text-teal-300">JSqlParser (SELECT-only)</p>
+              <p className="text-sm font-medium text-teal-300">JSqlParser (Full SQL AST Validator)</p>
             </div>
             <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
           </div>

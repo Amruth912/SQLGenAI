@@ -51,7 +51,8 @@ class QueryControllerTest {
         QueryResponse response = QueryResponse.success(sql, List.of("id"), List.of(Map.of("id", 1)), 10L);
 
         Mockito.when(aiSqlGenerationService.generateSql(anyString(), any())).thenReturn(sql);
-        Mockito.when(queryExecutionService.executeQuery(sql)).thenReturn(response);
+        Mockito.when(sqlValidationService.validateAndClassify(sql)).thenReturn(com.sqlgenai.service.SqlValidationResult.select());
+        Mockito.when(queryExecutionService.executeQuery(sql, "SELECT", true)).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/query")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -69,11 +70,13 @@ class QueryControllerTest {
         QueryResponse repairedResponse = QueryResponse.success(repairedSql, List.of("first_name"), List.of(Map.of("first_name", "Maya")), 8L);
 
         Mockito.when(aiSqlGenerationService.generateSql("Show employees", "public")).thenReturn(failedSql);
-        Mockito.when(queryExecutionService.executeQuery(failedSql))
+        Mockito.when(sqlValidationService.validateAndClassify(failedSql)).thenReturn(com.sqlgenai.service.SqlValidationResult.select());
+        Mockito.when(queryExecutionService.executeQuery(failedSql, "SELECT", true))
                 .thenThrow(new SqlExecutionException("column missing_column does not exist"));
         Mockito.when(aiSqlGenerationService.repairSql(
                 eq("Show employees"), eq("public"), eq(failedSql), anyString())).thenReturn(repairedSql);
-        Mockito.when(queryExecutionService.executeQuery(repairedSql)).thenReturn(repairedResponse);
+        Mockito.when(sqlValidationService.validateAndClassify(repairedSql)).thenReturn(com.sqlgenai.service.SqlValidationResult.select());
+        Mockito.when(queryExecutionService.executeQuery(repairedSql, "SELECT", true)).thenReturn(repairedResponse);
 
         mockMvc.perform(post("/api/v1/query")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -81,8 +84,26 @@ class QueryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.generatedSql").value(repairedSql));
 
-        verify(sqlValidationService).validateSql(failedSql);
-        verify(sqlValidationService).validateSql(repairedSql);
+        verify(sqlValidationService).validateAndClassify(failedSql);
+        verify(sqlValidationService).validateAndClassify(repairedSql);
         verify(aiSqlGenerationService).repairSql(eq("Show employees"), eq("public"), eq(failedSql), anyString());
+    }
+
+    @Test
+    void processQuery_mutatingRequiresConfirmation() throws Exception {
+        QueryRequest request = new QueryRequest("Delete employee 10", "public");
+        String sql = "DELETE FROM employees WHERE id = 10;";
+
+        Mockito.when(aiSqlGenerationService.generateSql(anyString(), any())).thenReturn(sql);
+        Mockito.when(sqlValidationService.validateAndClassify(sql))
+                .thenReturn(com.sqlgenai.service.SqlValidationResult.mutating("DELETE", "DESTRUCTIVE"));
+
+        mockMvc.perform(post("/api/v1/query")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requiresConfirmation").value(true))
+                .andExpect(jsonPath("$.statementType").value("DELETE"))
+                .andExpect(jsonPath("$.generatedSql").value(sql));
     }
 }

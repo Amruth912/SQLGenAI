@@ -36,7 +36,7 @@ public class HealthController {
         Map<String, Object> details = new HashMap<>();
         details.put("phase", "Phase 2 - Database Connection");
         details.put("aiProvider", aiProvider);
-        details.put("securityEngine", "JSqlParser AST Validator Ready");
+        details.put("securityEngine", "JSqlParser AST Validator Ready (Full SQL Support with Confirmation)");
 
         HealthResponse response = HealthResponse.of(
                 overallStatus,

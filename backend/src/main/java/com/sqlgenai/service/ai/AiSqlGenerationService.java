@@ -46,15 +46,22 @@ public class AiSqlGenerationService {
     }
 
     private String cleanSql(String sql) {
-        if (sql == null) return "";
+        if (sql == null || sql.isBlank()) return "";
         String cleaned = sql.trim();
-        if (cleaned.startsWith("```sql")) {
-            cleaned = cleaned.substring(6);
-        } else if (cleaned.startsWith("```")) {
-            cleaned = cleaned.substring(3);
+        // Extract content inside ```sql ... ``` or ``` ... ``` if present
+        if (cleaned.contains("```")) {
+            int start = cleaned.indexOf("```");
+            int firstNewline = cleaned.indexOf('\n', start);
+            int end = cleaned.lastIndexOf("```");
+            if (firstNewline != -1 && end > firstNewline) {
+                cleaned = cleaned.substring(firstNewline + 1, end).trim();
+            } else if (end > start + 3) {
+                cleaned = cleaned.substring(start + 3, end).trim();
+            }
         }
-        if (cleaned.endsWith("```")) {
-            cleaned = cleaned.substring(0, cleaned.length() - 3);
+        // Remove markdown backticks if wrapped like `SELECT ...`
+        if (cleaned.startsWith("`") && cleaned.endsWith("`") && cleaned.length() > 2) {
+            cleaned = cleaned.substring(1, cleaned.length() - 1).trim();
         }
         return cleaned.trim();
     }

@@ -12,7 +12,19 @@ public class DatabaseProperties {
     private String database = "sqlgenai_db";
     private String username = "postgres";
     private String password = "postgres";
+    private String jdbcUrl;
     private Security security = new Security();
+
+    public String getJdbcUrl() {
+        if (jdbcUrl != null && !jdbcUrl.isBlank()) {
+            return jdbcUrl;
+        }
+        return String.format("jdbc:postgresql://%s:%d/%s?sslmode=prefer", host, port, database);
+    }
+
+    public void setJdbcUrl(String jdbcUrl) {
+        this.jdbcUrl = jdbcUrl;
+    }
 
     public String getHost() {
         return host;
@@ -60,10 +72,6 @@ public class DatabaseProperties {
 
     public void setSecurity(Security security) {
         this.security = security;
-    }
-
-    public String getJdbcUrl() {
-        return String.format("jdbc:postgresql://%s:%d/%s?sslmode=prefer", host, port, database);
     }
 
     /**

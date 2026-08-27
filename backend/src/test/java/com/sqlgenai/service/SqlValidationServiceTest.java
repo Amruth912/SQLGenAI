@@ -18,12 +18,40 @@ class SqlValidationServiceTest {
 
     @Test
     void validateSql_validSelect_success() {
-        assertDoesNotThrow(() -> sqlValidationService.validateSql("SELECT * FROM users"));
+        SqlValidationResult result = sqlValidationService.validateAndClassify("SELECT * FROM users");
+        org.junit.jupiter.api.Assertions.assertTrue(result.readOnly());
+        org.junit.jupiter.api.Assertions.assertEquals("SELECT", result.statementType());
     }
 
     @Test
-    void validateSql_update_throwsException() {
-        assertThrows(SqlValidationException.class, () -> sqlValidationService.validateSql("UPDATE users SET name = 'test'"));
+    void validateSql_validInsert_success() {
+        SqlValidationResult result = sqlValidationService.validateAndClassify("INSERT INTO users (id, name) VALUES (1, 'Alice')");
+        org.junit.jupiter.api.Assertions.assertFalse(result.readOnly());
+        org.junit.jupiter.api.Assertions.assertEquals("INSERT", result.statementType());
+        org.junit.jupiter.api.Assertions.assertTrue(result.requiresConfirmation());
+    }
+
+    @Test
+    void validateSql_validUpdate_success() {
+        SqlValidationResult result = sqlValidationService.validateAndClassify("UPDATE users SET name = 'test' WHERE id = 1");
+        org.junit.jupiter.api.Assertions.assertFalse(result.readOnly());
+        org.junit.jupiter.api.Assertions.assertEquals("UPDATE", result.statementType());
+        org.junit.jupiter.api.Assertions.assertTrue(result.requiresConfirmation());
+    }
+
+    @Test
+    void validateSql_validCreateTable_success() {
+        SqlValidationResult result = sqlValidationService.validateAndClassify("CREATE TABLE students (id BIGINT PRIMARY KEY, name VARCHAR(100), age INT)");
+        org.junit.jupiter.api.Assertions.assertFalse(result.readOnly());
+        org.junit.jupiter.api.Assertions.assertEquals("CREATE_TABLE", result.statementType());
+    }
+
+    @Test
+    void validateSql_validDropTable_success() {
+        SqlValidationResult result = sqlValidationService.validateAndClassify("DROP TABLE students");
+        org.junit.jupiter.api.Assertions.assertFalse(result.readOnly());
+        org.junit.jupiter.api.Assertions.assertEquals("DROP", result.statementType());
+        org.junit.jupiter.api.Assertions.assertEquals("DESTRUCTIVE", result.riskLevel());
     }
 
     @Test

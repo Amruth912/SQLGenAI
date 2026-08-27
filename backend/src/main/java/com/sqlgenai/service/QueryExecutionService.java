@@ -29,35 +29,47 @@ public class QueryExecutionService {
     }
 
     public QueryResponse executeQuery(String sql) {
-        log.info("Executing SQL: {}", sql);
+        return executeQuery(sql, "SELECT", true);
+    }
+
+    public QueryResponse executeQuery(String sql, String statementType, boolean readOnly) {
+        log.info("Executing SQL (type={}): {}", statementType, sql);
         long startTime = System.currentTimeMillis();
 
         try {
             jdbcTemplate.setQueryTimeout(databaseProperties.getSecurity().getQueryTimeoutSeconds());
-            jdbcTemplate.setMaxRows(databaseProperties.getSecurity().getMaxRows());
 
-            List<String> columns = new ArrayList<>();
-            List<Map<String, Object>> rows = jdbcTemplate.query(sql, rs -> {
-                ResultSetMetaData metaData = rs.getMetaData();
-                int columnCount = metaData.getColumnCount();
-                for (int i = 1; i <= columnCount; i++) {
-                    columns.add(metaData.getColumnName(i));
-                }
+            if (readOnly || "SELECT".equalsIgnoreCase(statementType)) {
+                jdbcTemplate.setMaxRows(databaseProperties.getSecurity().getMaxRows());
 
-                List<Map<String, Object>> resultList = new ArrayList<>();
-                while (rs.next()) {
-                    Map<String, Object> row = new LinkedHashMap<>();
+                List<String> columns = new ArrayList<>();
+                List<Map<String, Object>> rows = jdbcTemplate.query(sql, rs -> {
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
                     for (int i = 1; i <= columnCount; i++) {
-                        row.put(columns.get(i - 1), rs.getObject(i));
+                        columns.add(metaData.getColumnName(i));
                     }
-                    resultList.add(row);
-                }
-                return resultList;
-            });
 
-            long executionTime = System.currentTimeMillis() - startTime;
-            log.info("Query executed successfully in {} ms, returned {} rows", executionTime, rows.size());
-            return QueryResponse.success(sql, columns, rows, executionTime);
+                    List<Map<String, Object>> resultList = new ArrayList<>();
+                    while (rs.next()) {
+                        Map<String, Object> row = new LinkedHashMap<>();
+                        for (int i = 1; i <= columnCount; i++) {
+                            row.put(columns.get(i - 1), rs.getObject(i));
+                        }
+                        resultList.add(row);
+                    }
+                    return resultList;
+                });
+
+                long executionTime = System.currentTimeMillis() - startTime;
+                log.info("Query executed successfully in {} ms, returned {} rows", executionTime, rows.size());
+                return QueryResponse.success(sql, columns, rows, executionTime, statementType, true);
+            } else {
+                int rowsAffected = jdbcTemplate.update(sql);
+                long executionTime = System.currentTimeMillis() - startTime;
+                log.info("Statement ({}) executed successfully in {} ms, affected {} rows", statementType, executionTime, rowsAffected);
+                return QueryResponse.dmlSuccess(sql, statementType, rowsAffected, executionTime);
+            }
         } catch (DataAccessException e) {
             log.error("Query execution failed: {}", e.getMessage());
             throw new SqlExecutionException(
