@@ -5,7 +5,7 @@ services:
     runtime: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
-    plan: free
+    plan: starter
     region: oregon
     envVars:
       - key: AI_PROVIDER
@@ -39,13 +39,12 @@ services:
       - key: INIT_SAMPLE_DATA
         value: "true"
 
-  # 2. React Frontend Static Site
+  # 2. React Frontend Static Site (always free on Render, no plan field)
   - type: web
     name: sqlgenai-frontend
     runtime: static
     buildCommand: cd frontend && npm install && npm run build
     staticPublishPath: frontend/dist
-    plan: free
     headers:
       - path: /*
         name: Access-Control-Allow-Origin
